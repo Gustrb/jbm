@@ -17,6 +17,17 @@ func NewBigEndianReaderFromReader(reader *bytes.Reader) *BigEndianReader {
 	}
 }
 
+func (ber *BigEndianReader) ReadUint8() (uint8, error) {
+	byte := make([]byte, 1)
+
+	_, err := ber.reader.Read(byte)
+	if err != nil {
+		return 0, err
+	}
+
+	return byte[0], nil
+}
+
 func (ber *BigEndianReader) ReadUint16() (uint16, error) {
 	bytes := make([]byte, 2)
 
