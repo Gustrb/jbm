@@ -127,6 +127,8 @@ func classFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 		constantPool[i] = cpInfo
 	}
 
+	classFile.constantPool = constantPool
+
 	return classFile, nil
 }
 
@@ -160,8 +162,6 @@ func constantPoolFromReader(reader *utils.BigEndianReader) (ConstantPoolInfo, er
 		}
 
 		cpInfo.info = ConstantPoolIndexableInfo{classIndex, nameAndTypeIndex}
-		fmt.Printf("classIndex: %d\n", classIndex)
-		fmt.Printf("nameAndTypeIndex: %d\n", nameAndTypeIndex)
 	} else if tag == CONSTANT_String {
 		stringIndex, err := reader.ReadUint16()
 
@@ -221,9 +221,33 @@ func ExecuteClassFile(reader *bytes.Reader) error {
 		return err
 	}
 
-	fmt.Printf("Magic: %x\n", classFile.magic)
-	fmt.Printf("Minor version: %d\n", classFile.minorVersion)
-	fmt.Printf("Major version: %d\n", classFile.majorVersion)
+	// for i, cpInfo := range classFile.constantPool {
+	// 	fmt.Printf("Constant pool entry %d\n", i)
+
+	// 	if cpInfo.tag == CONSTANT_Class {
+	// 		classInfo := cpInfo.info.(ClassInfo)
+	// 		fmt.Printf("Class name index: %d\n", classInfo.nameIndex)
+	// 	} else if cpInfo.tag == CONSTANT_Fieldref || cpInfo.tag == CONSTANT_Methodref || cpInfo.tag == CONSTANT_InterfaceMethodref {
+	// 		indexableInfo := cpInfo.info.(ConstantPoolIndexableInfo)
+	// 		fmt.Printf("Class index: %d\n", indexableInfo.classIndex)
+	// 		fmt.Printf("Name and type index: %d\n", indexableInfo.nameAndTypeIndex)
+	// 	} else if cpInfo.tag == CONSTANT_String {
+	// 		stringInfo := cpInfo.info.(StringInfo)
+	// 		fmt.Printf("String index: %d\n", stringInfo.stringIndex)
+
+	// 		fmt.Printf("String: %s\n", string(classFile.constantPool[stringInfo.stringIndex-1].info.(UTF8Info).bytes))
+	// 	} else if cpInfo.tag == CONSTANT_Integer || cpInfo.tag == CONSTANT_Float {
+	// 		n32Info := cpInfo.info.(Numeric32BitsInfo)
+	// 		fmt.Printf("Value: %d\n", n32Info.value)
+	// 	} else if cpInfo.tag == CONSTANT_NameAndType {
+	// 		nameAndTypeInfo := cpInfo.info.(NameAndTypeInfo)
+	// 		fmt.Printf("Name index: %d\n", nameAndTypeInfo.nameIndex)
+	// 		fmt.Printf("Descriptor index: %d\n", nameAndTypeInfo.descriptorIndex)
+	// 	} else if cpInfo.tag == CONSTANT_Utf8 {
+	// 		utf8Info := cpInfo.info.(UTF8Info)
+	// 		fmt.Printf("Bytes: %s\n", string(utf8Info.bytes))
+	// 	}
+	// }
 
 	return nil
 }
