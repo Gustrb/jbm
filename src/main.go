@@ -1,7 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"os"
+
+	"github.com/Gustrb/jbm/src/cli"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	cli, err := cli.CreateCLI(os.Args)
+	if err != nil {
+		os.Exit(1)
+		return
+	}
+
+	if err := cli.Run(); err != nil {
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }
