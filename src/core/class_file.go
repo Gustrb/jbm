@@ -103,8 +103,28 @@ const (
 var (
 	ErrInvalidMagicNumber      = fmt.Errorf("invalid magic number")
 	ErrInvalidConstantPoolSize = fmt.Errorf("invalid constant pool size")
+	Tags                       = map[uint8]string{
+		CONSTANT_Class:              "CONSTANT_Class",
+		CONSTANT_Fieldref:           "CONSTANT_Fieldref",
+		CONSTANT_Methodref:          "CONSTANT_Methodref",
+		CONSTANT_InterfaceMethodref: "CONSTANT_InterfaceMethodref",
+		CONSTANT_String:             "CONSTANT_String",
+		CONSTANT_Integer:            "CONSTANT_Integer",
+		CONSTANT_Float:              "CONSTANT_Float",
+		CONSTANT_Long:               "CONSTANT_Long",
+		CONSTANT_Double:             "CONSTANT_Double",
+		CONSTANT_NameAndType:        "CONSTANT_NameAndType",
+		CONSTANT_Utf8:               "CONSTANT_Utf8",
+		CONSTANT_MethodHandle:       "CONSTANT_MethodHandle",
+		CONSTANT_MethodType:         "CONSTANT_MethodType",
+		CONSTANT_InvokeDynamic:      "CONSTANT_InvokeDynamic",
+	}
 )
 
+// ClassFileFromReader reads a class file from a bytes.Reader
+//
+// It assumes the content of the reader is big-endian, so it uses a utils.BigEndianReader to read the data
+// from the reader.
 func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 	bigEndianReader := utils.NewBigEndianReaderFromReader(reader)
 	classFile := ClassFile{}
@@ -147,22 +167,29 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 		return classFile, ErrInvalidConstantPoolSize
 	}
 
-	constantPool := make([]ConstantPoolInfo, constantPoolCount-1)
-	for i := 0; i < len(constantPool); i++ {
-		cpInfo, err := constantPoolFromReader(bigEndianReader)
+	classFile.ConstantPool = make([]ConstantPoolInfo, constantPoolCount-1)
+	for i := 0; i < len(classFile.ConstantPool); i++ {
+		cpInfo, err := classFile.constantPoolFromReader(bigEndianReader)
 		if err != nil {
 			return classFile, err
 		}
 
-		constantPool[i] = cpInfo
+		classFile.ConstantPool[i] = cpInfo
 	}
 
-	classFile.ConstantPool = constantPool
+	if err := classFile.Validate(); err != nil {
+		return classFile, err
+	}
 
 	return classFile, nil
 }
 
-func constantPoolFromReader(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
+func (c *ClassFile) Validate() error {
+	// TODO: implement
+	return nil
+}
+
+func (c *ClassFile) constantPoolFromReader(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
 	cpInfo := ConstantPoolInfo{}
 	tag, err := reader.ReadUint8()
 
@@ -171,112 +198,142 @@ func constantPoolFromReader(reader *utils.BigEndianReader) (ConstantPoolInfo, er
 	}
 
 	if tag == CONSTANT_Class {
-		nameIndex, err := reader.ReadUint16()
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = ClassInfo{nameIndex}
-
-	} else if tag == CONSTANT_Fieldref || tag == CONSTANT_Methodref || tag == CONSTANT_InterfaceMethodref {
-		classIndex, err := reader.ReadUint16()
-		if err != nil {
-			return cpInfo, err
-		}
-
-		nameAndTypeIndex, err := reader.ReadUint16()
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = ConstantPoolIndexableInfo{classIndex, nameAndTypeIndex}
-	} else if tag == CONSTANT_String {
-		stringIndex, err := reader.ReadUint16()
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = StringInfo{stringIndex}
-	} else if tag == CONSTANT_Integer || tag == CONSTANT_Float {
-		value, err := reader.ReadUint32()
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = Numeric32BitsInfo{value}
-	} else if tag == CONSTANT_NameAndType {
-		nameIndex, err := reader.ReadUint16()
-		if err != nil {
-			return cpInfo, err
-		}
-
-		descriptorIndex, err := reader.ReadUint16()
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = NameAndTypeInfo{nameIndex, descriptorIndex}
-	} else if tag == CONSTANT_Utf8 {
-		length, err := reader.ReadUint16()
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		b, err := reader.ReadBytes(int(length))
-
-		if err != nil {
-			return cpInfo, err
-		}
-
-		cpInfo.Info = UTF8Info{Bytes: b}
-
-	} else {
-		return cpInfo, fmt.Errorf("invalid constant pool tag: %d", tag)
+		return c.readConstantPoolClassInfo(reader)
 	}
 
-	cpInfo.Tag = tag
+	if tag == CONSTANT_Fieldref || tag == CONSTANT_Methodref || tag == CONSTANT_InterfaceMethodref {
+		return c.readConstantPoolObjectRefInfo(reader, tag)
+	}
+
+	if tag == CONSTANT_String {
+		return c.readConstantPoolStringInfo(reader)
+	}
+
+	if tag == CONSTANT_Integer || tag == CONSTANT_Float {
+		return c.readConstantPoolNumeric32BitsInfo(reader, tag)
+	}
+
+	if tag == CONSTANT_NameAndType {
+		return c.readConstantPoolNameAndTypeInfo(reader)
+	}
+
+	if tag == CONSTANT_Utf8 {
+		return c.readConstantPoolUTF8Info(reader)
+	}
+
+	return cpInfo, fmt.Errorf("invalid constant pool tag: %d", tag)
+}
+
+func (c *ClassFile) readConstantPoolClassInfo(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: CONSTANT_Class,
+	}
+
+	nameIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = ClassInfo{nameIndex}
+
+	return cpInfo, nil
+}
+
+func (c *ClassFile) readConstantPoolObjectRefInfo(reader *utils.BigEndianReader, tag uint8) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: tag,
+	}
+
+	classIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	nameAndTypeIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = ConstantPoolIndexableInfo{classIndex, nameAndTypeIndex}
+
+	return cpInfo, nil
+}
+
+func (c *ClassFile) readConstantPoolStringInfo(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: CONSTANT_String,
+	}
+
+	stringIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = StringInfo{stringIndex}
+
+	return cpInfo, nil
+}
+
+func (c *ClassFile) readConstantPoolNumeric32BitsInfo(reader *utils.BigEndianReader, tag uint8) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: tag,
+	}
+
+	value, err := reader.ReadUint32()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = Numeric32BitsInfo{value}
+
+	return cpInfo, nil
+}
+
+func (c *ClassFile) readConstantPoolNameAndTypeInfo(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: CONSTANT_NameAndType,
+	}
+
+	nameIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	descriptorIndex, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = NameAndTypeInfo{nameIndex, descriptorIndex}
+
+	return cpInfo, nil
+}
+
+func (c *ClassFile) readConstantPoolUTF8Info(reader *utils.BigEndianReader) (ConstantPoolInfo, error) {
+	cpInfo := ConstantPoolInfo{
+		Tag: CONSTANT_Utf8,
+	}
+
+	length, err := reader.ReadUint16()
+	if err != nil {
+		return cpInfo, err
+	}
+
+	b, err := reader.ReadBytes(int(length))
+	if err != nil {
+		return cpInfo, err
+	}
+
+	cpInfo.Info = UTF8Info{Bytes: b}
 
 	return cpInfo, nil
 }
 
 func ExecuteClassFile(reader *bytes.Reader) error {
-	classFile, err := ClassFileFromReader(reader)
+	_, err := ClassFileFromReader(reader)
 
 	if err != nil {
 		return err
-	}
-
-	for i, cpInfo := range classFile.ConstantPool {
-		fmt.Printf("Constant pool entry %d\n", i)
-
-		if cpInfo.Tag == CONSTANT_Class {
-			classInfo := cpInfo.Info.(ClassInfo)
-			fmt.Printf("Class name index: %d\n", classInfo.NameIndex)
-		} else if cpInfo.Tag == CONSTANT_Fieldref || cpInfo.Tag == CONSTANT_Methodref || cpInfo.Tag == CONSTANT_InterfaceMethodref {
-			indexableInfo := cpInfo.Info.(ConstantPoolIndexableInfo)
-			fmt.Printf("Class index: %d\n", indexableInfo.ClassIndex)
-			fmt.Printf("Name and type index: %d\n", indexableInfo.NameAndTypeIndex)
-		} else if cpInfo.Tag == CONSTANT_String {
-			stringInfo := cpInfo.Info.(StringInfo)
-			fmt.Printf("String index: %d\n", stringInfo.StringIndex)
-
-			fmt.Printf("String: %s\n", string(classFile.ConstantPool[stringInfo.StringIndex-1].Info.(UTF8Info).Bytes))
-		} else if cpInfo.Tag == CONSTANT_Integer || cpInfo.Tag == CONSTANT_Float {
-			n32Info := cpInfo.Info.(Numeric32BitsInfo)
-			fmt.Printf("Value: %d\n", n32Info.Value)
-		} else if cpInfo.Tag == CONSTANT_NameAndType {
-			nameAndTypeInfo := cpInfo.Info.(NameAndTypeInfo)
-			fmt.Printf("Name index: %d\n", nameAndTypeInfo.NameIndex)
-			fmt.Printf("Descriptor index: %d\n", nameAndTypeInfo.DescriptorIndex)
-		} else if cpInfo.Tag == CONSTANT_Utf8 {
-			utf8Info := cpInfo.Info.(UTF8Info)
-			fmt.Printf("Bytes: %s\n", string(utf8Info.Bytes))
-		}
 	}
 
 	return nil
