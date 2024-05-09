@@ -9,5 +9,8 @@ outdir:
 clean:
 	rm -rf ./bin
 
-test:
+test: build-test
 	go test ./... -v
+
+build-test:
+	javac ./tests/fixtures/*.java
