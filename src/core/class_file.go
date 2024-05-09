@@ -177,6 +177,42 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 		classFile.ConstantPool[i] = cpInfo
 	}
 
+	accessFlags, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.AccessFlags = accessFlags
+
+	thisClass, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.ThisClass = thisClass
+
+	superClass, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.SuperClass = superClass
+
+	interfacesCount, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.Interfaces = make([]uint16, interfacesCount)
+	for i := 0; i < len(classFile.Interfaces); i++ {
+		interfaceIndex, err := bigEndianReader.ReadUint16()
+		if err != nil {
+			return classFile, err
+		}
+
+		classFile.Interfaces[i] = interfaceIndex
+	}
+
 	if err := classFile.Validate(); err != nil {
 		return classFile, err
 	}

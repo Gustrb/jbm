@@ -119,4 +119,20 @@ func TestShouldAllowAValidJavaProgram(t *testing.T) {
 			t.Fatalf("Expected constant pool entry %d to be %s, got %s", i, e, cf.ConstantPool[i].String())
 		}
 	}
+
+	if cf.AccessFlags != 33 {
+		t.Fatalf("Expected access flags to be 33, got %d", cf.AccessFlags)
+	}
+
+	if cf.ThisClass != 7 {
+		t.Fatalf("Expected this class to be 7, got %d", cf.ThisClass)
+	}
+
+	if cf.SuperClass != 2 {
+		t.Fatalf("Expected super class to be 2, got %d", cf.SuperClass)
+	}
+
+	if len(cf.Interfaces) != 0 {
+		t.Fatalf("Expected interfaces to be empty, got %d", len(cf.Interfaces))
+	}
 }
