@@ -280,6 +280,10 @@ func (c *ClassFile) Validate() error {
 		return err
 	}
 
+	if err := c.ValidateAccessFlags(); err != nil {
+		return err
+	}
+
 	// TODO: implement
 	return nil
 }
@@ -287,6 +291,58 @@ func (c *ClassFile) Validate() error {
 func (c *ClassFile) validateMagicNumber() error {
 	if c.Magic != MagicNumber {
 		return fmt.Errorf("invalid magic number: 0x%x", c.Magic)
+	}
+
+	return nil
+}
+
+const (
+	ACC_PUBLIC     uint16 = 0x0001
+	ACC_FINAL      uint16 = 0x0010
+	ACC_SUPER      uint16 = 0x0020
+	ACC_INTERFACE  uint16 = 0x0200
+	ACC_ABSTRACT   uint16 = 0x0400
+	ACC_SYNTHETIC  uint16 = 0x1000
+	ACC_ANNOTATION uint16 = 0x2000
+	ACC_ENUM       uint16 = 0x4000
+)
+
+func (c *ClassFile) ValidateAccessFlags() error {
+	validFlags := ACC_PUBLIC | ACC_FINAL | ACC_SUPER | ACC_INTERFACE | ACC_ABSTRACT | ACC_SYNTHETIC | ACC_ANNOTATION | ACC_ENUM
+	if c.AccessFlags&^validFlags != 0 {
+		return fmt.Errorf("invalid access flags: 0x%x", c.AccessFlags)
+	}
+
+	// If the ACC_INTERFACE flag is set, the ACC_ABSTRACT flag must also be set, and the ACC_FINAL, ACC_SUPER,
+	// and ACC_ENUM flags set must not be set.
+	if c.AccessFlags&ACC_INTERFACE != 0 {
+		if c.AccessFlags&ACC_ABSTRACT == 0 {
+			return fmt.Errorf("interface must have abstract flag set")
+		}
+
+		if c.AccessFlags&ACC_FINAL != 0 {
+			return fmt.Errorf("interface must not have final flag set")
+		}
+
+		if c.AccessFlags&ACC_SUPER != 0 {
+			return fmt.Errorf("interface must not have super flag set")
+		}
+
+		if c.AccessFlags&ACC_ENUM != 0 {
+			return fmt.Errorf("interface must not have enum flag set")
+		}
+	}
+
+	// If the ACC_INTERFACE flag is not set, any of the other flags in Table 4.1-A may be set except ACC_ANNOTATION.
+	// However, such a class file must not have both its ACC_FINAL and ACC_ABSTRACT flags set.
+	if c.AccessFlags&ACC_INTERFACE == 0 {
+		if c.AccessFlags&ACC_FINAL != 0 && c.AccessFlags&ACC_ABSTRACT != 0 {
+			return fmt.Errorf("class must not have both final and abstract flags set")
+		}
+
+		if c.AccessFlags&ACC_ANNOTATION != 0 {
+			return fmt.Errorf("class must not have annotation flag set")
+		}
 	}
 
 	return nil
