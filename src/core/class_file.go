@@ -116,7 +116,6 @@ const (
 )
 
 var (
-	ErrInvalidMagicNumber      = fmt.Errorf("invalid magic number")
 	ErrInvalidConstantPoolSize = fmt.Errorf("invalid constant pool size")
 	Tags                       = map[uint8]string{
 		CONSTANT_Class:              "CONSTANT_Class",
@@ -148,10 +147,6 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 	magic, err := bigEndianReader.ReadUint32()
 	if err != nil {
 		return classFile, err
-	}
-
-	if magic != MagicNumber {
-		return classFile, ErrInvalidMagicNumber
 	}
 
 	classFile.Magic = magic
@@ -281,7 +276,19 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 }
 
 func (c *ClassFile) Validate() error {
+	if err := c.validateMagicNumber(); err != nil {
+		return err
+	}
+
 	// TODO: implement
+	return nil
+}
+
+func (c *ClassFile) validateMagicNumber() error {
+	if c.Magic != MagicNumber {
+		return fmt.Errorf("invalid magic number: 0x%x", c.Magic)
+	}
+
 	return nil
 }
 

@@ -7,12 +7,19 @@ import (
 	"github.com/Gustrb/jbm/src/core"
 )
 
-func TestItShouldFailIfTheMagicNumberIsNotValid(t *testing.T) {
-	b := []byte{0x00, 0xFE, 0xBA, 0xBE}
+func TestShouldValidateMagicNumber(t *testing.T) {
+	cf := core.ClassFile{Magic: 0xCAFEBABE}
 
-	_, err := core.ClassFileFromReader(bytes.NewReader(b))
-	if err != core.ErrInvalidMagicNumber {
-		t.Errorf("Expected ErrInvalidMagicNumber, got %v", err)
+	if err := cf.Validate(); err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
+func TestShouldFailIfMagicNumberIsInvalid(t *testing.T) {
+	cf := core.ClassFile{Magic: 0xDEADBEEF}
+
+	if err := cf.Validate(); err.Error() != "invalid magic number: 0xdeadbeef" {
+		t.Errorf("Expected 'invalid magic number 0xdeadbeef', got %v", err)
 	}
 }
 
