@@ -7,9 +7,15 @@ It is a work in progress and is not yet functional, to see the progress check th
 
 ### Tests
 
-We have a lot of java classes written to test the interpreter, you can find them in the `test` directory.
-To run the tests, you can use the `scripts/run_tests.sh` script, it will build all the java classes and run the interpreter with them.
-So we will require the `javac` and `java` commands to be available in the system.
+We have a lot of java classes written to test the interpreter, you can find them in the `tests/fixtures` directory.
+
+To run the tests you will need the [make](https://www.gnu.org/software/make/) command available in your system, along with the `javac` and `java` commands.
+
+To run all tests you can simply:
+
+```bash
+$ make test
+```
 
 ### Building
 
