@@ -63,4 +63,8 @@ func TestShouldAllowClassFileImplementingAnEmptyInterface(t *testing.T) {
 	if cf.Interfaces[0] != 9 {
 		t.Fatalf("Expected interface to be 9, got %d", cf.Interfaces[0])
 	}
+
+	if len(cf.Fields) != 0 {
+		t.Fatalf("Expected fields to be empty, got %d", len(cf.Fields))
+	}
 }

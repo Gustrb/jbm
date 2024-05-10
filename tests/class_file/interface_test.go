@@ -54,4 +54,8 @@ func TestShouldAllowValidClassFileWithInterfaceDefinition(t *testing.T) {
 	if len(cf.Interfaces) != 0 {
 		t.Fatalf("Expected interfaces to be 0, got %d", len(cf.Interfaces))
 	}
+
+	if len(cf.Fields) != 0 {
+		t.Fatalf("Expected fields to be empty, got %d", len(cf.Fields))
+	}
 }

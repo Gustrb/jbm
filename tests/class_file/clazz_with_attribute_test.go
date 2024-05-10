@@ -8,10 +8,10 @@ import (
 	"github.com/Gustrb/jbm/src/utils"
 )
 
-var EmptyClassFile, _ = utils.ReadFileContent("../fixtures/Empty.class")
+var ClazzWithAttributeClassFile, _ = utils.ReadFileContent("../fixtures/ClazzWithAttribute.class")
 
-func TestShouldAllowAValidJavaProgram(t *testing.T) {
-	cf, err := core.ClassFileFromReader(bytes.NewReader(EmptyClassFile))
+func TestShouldParseTheAttributesOfTheClass(t *testing.T) {
+	cf, err := core.ClassFileFromReader(bytes.NewReader(ClazzWithAttributeClassFile))
 
 	if err != nil {
 		t.Fatalf("Error reading class file: %s", err)
@@ -29,13 +29,13 @@ func TestShouldAllowAValidJavaProgram(t *testing.T) {
 		"UTF8Info{ Bytes: <init> }",
 		"UTF8Info{ Bytes: ()V }",
 		"ClassInfo{ NameIndex: 8 }",
-		"UTF8Info{ Bytes: Empty }",
+		"UTF8Info{ Bytes: ClazzWithAttribute }",
+		"UTF8Info{ Bytes: attr }",
+		"UTF8Info{ Bytes: Ljava/lang/String; }",
 		"UTF8Info{ Bytes: Code }",
 		"UTF8Info{ Bytes: LineNumberTable }",
-		"UTF8Info{ Bytes: main }",
-		"UTF8Info{ Bytes: ([Ljava/lang/String;)V }",
 		"UTF8Info{ Bytes: SourceFile }",
-		"UTF8Info{ Bytes: Empty.java }",
+		"UTF8Info{ Bytes: ClazzWithAttribute.java }",
 	}
 
 	for i, e := range expected {
@@ -60,7 +60,23 @@ func TestShouldAllowAValidJavaProgram(t *testing.T) {
 		t.Fatalf("Expected interfaces to be empty, got %d", len(cf.Interfaces))
 	}
 
-	if len(cf.Fields) != 0 {
-		t.Fatalf("Expected fields to be empty, got %d", len(cf.Fields))
+	if len(cf.Fields) != 1 {
+		t.Fatalf("Expected fields to have 1 element, got %d", len(cf.Fields))
+	}
+
+	if cf.Fields[0].AccessFlags != 1 {
+		t.Fatalf("Expected field access flags to be 1, got %d", cf.Fields[0].AccessFlags)
+	}
+
+	if cf.Fields[0].NameIndex != 9 {
+		t.Fatalf("Expected field name index to be 9, got %d", cf.Fields[0].NameIndex)
+	}
+
+	if cf.Fields[0].DescriptorIndex != 10 {
+		t.Fatalf("Expected field descriptor index to be 10, got %d", cf.Fields[0].DescriptorIndex)
+	}
+
+	if len(cf.Fields[0].Attributes) != 0 {
+		t.Fatalf("Expected field attributes to be empty, got %d", len(cf.Fields[0].Attributes))
 	}
 }
