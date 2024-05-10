@@ -73,7 +73,12 @@ type FieldInfo struct {
 	Attributes      []AttributeInfo
 }
 
-type MethodInfo struct{}
+type MethodInfo struct {
+	AccessFlags     uint16
+	NameIndex       uint16
+	DescriptorIndex uint16
+	Attributes      []AttributeInfo
+}
 
 type ClassFile struct {
 	Magic        uint32
@@ -236,6 +241,36 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 		}
 
 		classFile.Fields[i] = f
+	}
+
+	methodsCount, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.Methods = make([]MethodInfo, methodsCount)
+	for i := 0; i < len(classFile.Methods); i++ {
+		m, err := classFile.methodInfoFromReader(bigEndianReader)
+		if err != nil {
+			return classFile, err
+		}
+
+		classFile.Methods[i] = m
+	}
+
+	attributesCount, err := bigEndianReader.ReadUint16()
+	if err != nil {
+		return classFile, err
+	}
+
+	classFile.Attributes = make([]AttributeInfo, attributesCount)
+	for i := 0; i < len(classFile.Attributes); i++ {
+		a, err := classFile.attributeInfoFromReader(bigEndianReader)
+		if err != nil {
+			return classFile, err
+		}
+
+		classFile.Attributes[i] = a
 	}
 
 	if err := classFile.Validate(); err != nil {
@@ -455,6 +490,48 @@ func (c *ClassFile) attributeInfoFromReader(reader *utils.BigEndianReader) (Attr
 	attr.Info = info
 
 	return attr, nil
+}
+
+func (c *ClassFile) methodInfoFromReader(reader *utils.BigEndianReader) (MethodInfo, error) {
+	mInfo := MethodInfo{}
+
+	accessFlags, err := reader.ReadUint16()
+	if err != nil {
+		return mInfo, err
+	}
+
+	mInfo.AccessFlags = accessFlags
+
+	nameIndex, err := reader.ReadUint16()
+	if err != nil {
+		return mInfo, err
+	}
+
+	mInfo.NameIndex = nameIndex
+
+	descriptorIndex, err := reader.ReadUint16()
+	if err != nil {
+		return mInfo, err
+	}
+
+	mInfo.DescriptorIndex = descriptorIndex
+
+	attributesCount, err := reader.ReadUint16()
+	if err != nil {
+		return mInfo, err
+	}
+
+	mInfo.Attributes = make([]AttributeInfo, attributesCount)
+	for i := 0; i < len(mInfo.Attributes); i++ {
+		attr, err := c.attributeInfoFromReader(reader)
+		if err != nil {
+			return mInfo, err
+		}
+
+		mInfo.Attributes[i] = attr
+	}
+
+	return mInfo, nil
 }
 
 func ExecuteClassFile(reader *bytes.Reader) error {

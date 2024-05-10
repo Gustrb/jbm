@@ -67,4 +67,28 @@ func TestShouldAllowClassFileImplementingAnEmptyInterface(t *testing.T) {
 	if len(cf.Fields) != 0 {
 		t.Fatalf("Expected fields to be empty, got %d", len(cf.Fields))
 	}
+
+	if len(cf.Methods) != 1 {
+		t.Fatalf("Expected methods to be 1, got %d", len(cf.Methods))
+	}
+
+	if cf.Methods[0].NameIndex != 5 {
+		t.Fatalf("Expected method name index to be 5, got %d", cf.Methods[0].NameIndex)
+	}
+
+	if cf.Methods[0].DescriptorIndex != 6 {
+		t.Fatalf("Expected method descriptor index to be 6, got %d", cf.Methods[0].DescriptorIndex)
+	}
+
+	if len(cf.Methods[0].Attributes) != 1 {
+		t.Fatalf("Expected method attributes to be 1, got %d", len(cf.Methods[0].Attributes))
+	}
+
+	if cf.Methods[0].Attributes[0].AttributeNameIndex != 11 {
+		t.Fatalf("Expected method attribute name index to be 11, got %d", cf.Methods[0].Attributes[0].AttributeNameIndex)
+	}
+
+	if len(cf.Attributes) != 1 {
+		t.Fatalf("Expected attributes to be 1, got %d", len(cf.Attributes))
+	}
 }

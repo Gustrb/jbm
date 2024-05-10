@@ -63,4 +63,28 @@ func TestShouldAllowAValidJavaProgram(t *testing.T) {
 	if len(cf.Fields) != 0 {
 		t.Fatalf("Expected fields to be empty, got %d", len(cf.Fields))
 	}
+
+	if len(cf.Methods) != 2 {
+		t.Fatalf("Expected methods to be empty, got %d", len(cf.Methods))
+	}
+
+	if cf.Methods[0].NameIndex != 5 {
+		t.Fatalf("Expected method name index to be 5, got %d", cf.Methods[0].NameIndex)
+	}
+
+	if cf.Methods[0].DescriptorIndex != 6 {
+		t.Fatalf("Expected method descriptor index to be 6, got %d", cf.Methods[0].DescriptorIndex)
+	}
+
+	if cf.Methods[1].NameIndex != 11 {
+		t.Fatalf("Expected method name index to be 11, got %d", cf.Methods[1].NameIndex)
+	}
+
+	if cf.Methods[1].DescriptorIndex != 12 {
+		t.Fatalf("Expected method descriptor index to be 12, got %d", cf.Methods[1].DescriptorIndex)
+	}
+
+	if len(cf.Attributes) != 1 {
+		t.Fatalf("Expected attributes to be empty, got %d", len(cf.Attributes))
+	}
 }
