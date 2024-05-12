@@ -11,7 +11,7 @@ import (
 func TestShouldValidateMagicNumber(t *testing.T) {
 	cf := core.ClassFile{Magic: 0xCAFEBABE}
 
-	if err := cf.Validate(); err != nil {
+	if err := cf.ValidateMagicNumber(); err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
@@ -19,7 +19,7 @@ func TestShouldValidateMagicNumber(t *testing.T) {
 func TestShouldFailIfMagicNumberIsInvalid(t *testing.T) {
 	cf := core.ClassFile{Magic: 0xDEADBEEF}
 
-	if err := cf.Validate(); err.Error() != "invalid magic number: 0xdeadbeef" {
+	if err := cf.ValidateMagicNumber(); err.Error() != "invalid magic number: 0xdeadbeef" {
 		t.Errorf("Expected 'invalid magic number 0xdeadbeef', got %v", err)
 	}
 }
@@ -105,6 +105,31 @@ func TestItShouldAllowValidAccessFlags(t *testing.T) {
 
 	cf.AccessFlags = core.ACC_PUBLIC | core.ACC_SUPER
 	if err := cf.ValidateAccessFlags(); err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
+func TestShouldNotAllowInvalidThisClass(t *testing.T) {
+	cf := core.ClassFile{ThisClass: 0}
+
+	if err := cf.ValidateThisClass(); err.Error() != "invalid this class index: 0" {
+		t.Errorf("Expected 'invalid this class index: 0', got %v", err)
+	}
+
+	cf.ThisClass = 1
+	cf.ConstantPool = make([]core.ConstantPoolInfo, 1)
+	cf.ConstantPool[0] = core.ConstantPoolInfo{Tag: core.CONSTANT_Utf8}
+
+	if err := cf.ValidateThisClass(); err.Error() != "this class should be a CONSTANT_Class_info" {
+		t.Errorf("Expected 'this class should be a CONSTANT_Class_info', got %v", err)
+	}
+}
+
+func TestShouldAllowValidThisClass(t *testing.T) {
+	cf := core.ClassFile{ThisClass: 1, ConstantPool: make([]core.ConstantPoolInfo, 1)}
+	cf.ConstantPool[0] = core.ConstantPoolInfo{Tag: core.CONSTANT_Class}
+
+	if err := cf.ValidateThisClass(); err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }

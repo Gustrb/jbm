@@ -276,7 +276,7 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 }
 
 func (c *ClassFile) Validate() error {
-	if err := c.validateMagicNumber(); err != nil {
+	if err := c.ValidateMagicNumber(); err != nil {
 		return err
 	}
 
@@ -284,11 +284,15 @@ func (c *ClassFile) Validate() error {
 		return err
 	}
 
+	if err := c.ValidateThisClass(); err != nil {
+		return err
+	}
+
 	// TODO: implement
 	return nil
 }
 
-func (c *ClassFile) validateMagicNumber() error {
+func (c *ClassFile) ValidateMagicNumber() error {
 	if c.Magic != MagicNumber {
 		return fmt.Errorf("invalid magic number: 0x%x", c.Magic)
 	}
@@ -343,6 +347,19 @@ func (c *ClassFile) ValidateAccessFlags() error {
 		if c.AccessFlags&ACC_ANNOTATION != 0 {
 			return fmt.Errorf("class must not have annotation flag set")
 		}
+	}
+
+	return nil
+}
+
+func (c *ClassFile) ValidateThisClass() error {
+	// ThisClass should be a valid ConstantPool index and it should always be of tag CONSTANT_Class_info
+	if c.ThisClass == 0 || c.ThisClass > uint16(len(c.ConstantPool)) {
+		return fmt.Errorf("invalid this class index: %d", c.ThisClass)
+	}
+
+	if c.ConstantPool[c.ThisClass-1].Tag != CONSTANT_Class {
+		return fmt.Errorf("this class should be a CONSTANT_Class_info")
 	}
 
 	return nil
