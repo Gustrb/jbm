@@ -9,8 +9,30 @@ import (
 
 // Spec: https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html
 
+const (
+	CONSTANT_Class              uint8 = 7
+	CONSTANT_Fieldref           uint8 = 9
+	CONSTANT_Methodref          uint8 = 10
+	CONSTANT_InterfaceMethodref uint8 = 11
+	CONSTANT_String             uint8 = 8
+	CONSTANT_Integer            uint8 = 3
+	CONSTANT_Float              uint8 = 4
+	CONSTANT_Long               uint8 = 5
+	CONSTANT_Double             uint8 = 6
+	CONSTANT_NameAndType        uint8 = 12
+	CONSTANT_Utf8               uint8 = 1
+	CONSTANT_MethodHandle       uint8 = 15
+	CONSTANT_MethodType         uint8 = 16
+	CONSTANT_InvokeDynamic      uint8 = 18
+)
+
+// ConstantPoolInfo represents an element inside the `ConstantPool`
+// of a Java class file.
 type ConstantPoolInfo struct {
-	Tag  uint8
+	// Tag is the type of the constant pool entry.
+	Tag uint8
+	// Info is the actual data of the constant pool entry, which can be of different types
+	// depending on the value of `Tag`.
 	Info interface{}
 }
 
@@ -35,21 +57,38 @@ func (c *ConstantPoolInfo) String() string {
 	}
 }
 
+// ClassInfo represents a CONSTANT_Class_info structure in the constant pool.
+// It is used to represent a class or an interface.
 type ClassInfo struct {
+	// NameIndex is the index of a UTF-8 entry in the constant pool that represents the name of the class.
 	NameIndex uint16
 }
 
+// ConstantPoolIndexableInfo represents a CONSTANT_Fieldref_info, CONSTANT_Methodref_info or
+// CONSTANT_InterfaceMethodref_info structure in the constant pool.
+//
+// It is used to represent a field, method or interface method respectively.
 type ConstantPoolIndexableInfo struct {
-	ClassIndex       uint16
+	// ClassIndex is the index of a CONSTANT_Class_info structure in the constant pool.
+	ClassIndex uint16
+	// NameAndTypeIndex is the index of a CONSTANT_NameAndType_info structure in the constant pool.
 	NameAndTypeIndex uint16
 }
 
+// NameAndTypeInfo represents a CONSTANT_NameAndType_info structure in the constant pool.
+// It is used to represent a field or method name and type descriptor.
 type NameAndTypeInfo struct {
-	NameIndex       uint16
+	// NameIndex is the index of a UTF-8 entry in the constant pool that represents the name of the field or method.
+	NameIndex uint16
+	// DescriptorIndex is the index of a UTF-8 entry in the constant pool that
+	// represents the descriptor of the field or method.
+	// The descriptor is a string representing the type of the field or method.
 	DescriptorIndex uint16
 }
 
+// StringInfo represents a CONSTANT_String_info structure in the constant pool.
 type StringInfo struct {
+	// StringIndex is the index of a UTF-8 entry in the constant pool that represents the string value.
 	StringIndex uint16
 }
 
@@ -57,63 +96,87 @@ type Numeric32BitsInfo struct {
 	Value uint32
 }
 
+// UTF8Info represents a CONSTANT_Utf8_info structure in the constant pool.
+// It is used to represent a string value.
 type UTF8Info struct {
+	// Bytes is the UTF-8 encoded string.
 	Bytes []byte
 }
 
+// AttributeInfo represents an attribute of a class file, field or method.
 type AttributeInfo struct {
+	// AttributeNameIndex is the index of a UTF-8 entry in the constant pool that represents the name of the attribute.
 	AttributeNameIndex uint16
-	Info               []byte
+	// Info is the actual data of the attribute, the structure of which depends on the attribute name.
+	// for example, the `Code` attribute has its own structure.
+	// The `Info` field is a byte slice that contains the raw data of the attribute.
+	Info []byte
 }
 
+// FieldInfo represents a field of a class.
+// It contains the access flags, name, descriptor and attributes of the field.
 type FieldInfo struct {
-	AccessFlags     uint16
-	NameIndex       uint16
+	// AccessFlags is a mask of flags used to denote access permissions to and properties of the field.
+	AccessFlags uint16
+	// NameIndex is the index of a UTF-8 entry in the constant pool that represents the name of the field.
+	NameIndex uint16
+	// DescriptorIndex is the index of a UTF-8 entry in the constant pool that represents the descriptor of the field.
+	// The descriptor is a string representing the type of the field.
 	DescriptorIndex uint16
-	Attributes      []AttributeInfo
+	// Attributes is a list of attributes of the field.
+	Attributes []AttributeInfo
 }
 
+// MethodInfo represents a method of a class.
 type MethodInfo struct {
-	AccessFlags     uint16
-	NameIndex       uint16
+	// AccessFlags is a mask of flags used to denote access permissions to and properties of the method.
+	AccessFlags uint16
+	// NameIndex is the index of a UTF-8 entry in the constant pool that represents the name of the method.
+	NameIndex uint16
+	// DescriptorIndex is the index of a UTF-8 entry in the constant pool that represents the descriptor of the method.
+	// The descriptor is a string representing the type of the method.
 	DescriptorIndex uint16
-	Attributes      []AttributeInfo
+	// Attributes is a list of attributes of the method.
+	Attributes []AttributeInfo
 }
 
+// ClassFile represents the structure of a Java class file.
 type ClassFile struct {
-	Magic        uint32
+	// Magic is the magic number of the class file.
+	// It is always 0xCAFEBABE.
+	Magic uint32
+	// MinorVersion is the minor version of the class file.
+	// It is used to indicate changes to the class file that are not compatible with previous versions.
 	MinorVersion uint16
+	// MajorVersion is the major version of the class file.
+	// It is used to indicate changes to the class file that are not compatible with previous versions.
 	MajorVersion uint16
+	// ConstantPool is the constant pool of the class file.
+	// The constant pool is a table of structures representing various constants.
 	ConstantPool []ConstantPoolInfo
-	AccessFlags  uint16
-	ThisClass    uint16
-	SuperClass   uint16
-	Interfaces   []uint16
-	Fields       []FieldInfo
-	Methods      []MethodInfo
-	Attributes   []AttributeInfo
+	// AccessFlags is a mask of flags used to denote access permissions to and properties of the class.
+	// The flags are used to denote if the class is public, final, etc.
+	AccessFlags uint16
+	// ThisClass is the index of a CONSTANT_Class_info structure in the constant pool.
+	// It represents the class or interface defined by the class file.
+	ThisClass uint16
+	// SuperClass is the index of a CONSTANT_Class_info structure in the constant pool.
+	// It represents the direct superclass of the class defined by the class file.
+	SuperClass uint16
+	// Interfaces is a list of indices of CONSTANT_Class_info structures in the constant pool.
+	// Each index represents an interface implemented by the class.
+	Interfaces []uint16
+	// Fields is a list of fields of the class.
+	// Each field contains the access flags, name, descriptor and attributes of the field.
+	Fields []FieldInfo
+	// Methods is a list of methods of the class.
+	Methods []MethodInfo
+	// Attributes is a list of attributes of the class.
+	Attributes []AttributeInfo
 }
 
+// MagicNumber is the magic number of a Java class file. It is always 0xCAFEBABE.
 const MagicNumber uint32 = 0xCAFEBABE
-
-// Constant pool tags docs:
-// https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4-140
-const (
-	CONSTANT_Class              uint8 = 7
-	CONSTANT_Fieldref           uint8 = 9
-	CONSTANT_Methodref          uint8 = 10
-	CONSTANT_InterfaceMethodref uint8 = 11
-	CONSTANT_String             uint8 = 8
-	CONSTANT_Integer            uint8 = 3
-	CONSTANT_Float              uint8 = 4
-	CONSTANT_Long               uint8 = 5
-	CONSTANT_Double             uint8 = 6
-	CONSTANT_NameAndType        uint8 = 12
-	CONSTANT_Utf8               uint8 = 1
-	CONSTANT_MethodHandle       uint8 = 15
-	CONSTANT_MethodType         uint8 = 16
-	CONSTANT_InvokeDynamic      uint8 = 18
-)
 
 var (
 	ErrInvalidConstantPoolSize = fmt.Errorf("invalid constant pool size")
@@ -275,6 +338,12 @@ func ClassFileFromReader(reader *bytes.Reader) (ClassFile, error) {
 	return classFile, nil
 }
 
+// Validate validates the class file
+// It checks if the magic number is correct, if the access flags are valid, if the this_class and super_class, etc...
+// are valid.
+//
+// It is really heavy and should be used only for debugging purposes, as it is not necessary to fully validate a class,
+// since you need to go through the whole class hierarchy to fully validate it.
 func (c *ClassFile) Validate() error {
 	if err := c.ValidateMagicNumber(); err != nil {
 		return err
@@ -572,6 +641,11 @@ func (c *ClassFile) attributeInfoFromReader(reader *utils.BigEndianReader) (Attr
 	return attr, nil
 }
 
+// methodInfoFromReader reads a method_info structure from the reader, it assumes the reader
+// is correctly positioned at the beggining of the structure.
+//
+// Here, we don't validate the method_info structure, we just return an error if there is any
+// kind of IO problem, + we return the incomplete `MethodInfo` structure.
 func (c *ClassFile) methodInfoFromReader(reader *utils.BigEndianReader) (MethodInfo, error) {
 	mInfo := MethodInfo{}
 
